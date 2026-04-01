@@ -287,6 +287,11 @@
   </div>
 
   <script>
+    // Already logged in check
+const existingUser = localStorage.getItem('user');
+if (existingUser) {
+  window.location.href = 'https://stack-tracker-production.up.railway.app/';
+}
     function switchTab(tab, el) {
       document.querySelectorAll('.auth-tab').forEach(t => t.classList.remove('active'));
       document.querySelectorAll('.auth-form').forEach(f => f.classList.remove('active'));
