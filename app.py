@@ -4,6 +4,7 @@ from database import get_db, init_db
 from datetime import date, timedelta
 import smtplib
 import bcrypt
+import os
 from twilio.rest import Client
 from apscheduler.schedulers.background import BackgroundScheduler
 from email.mime.text import MIMEText
@@ -12,7 +13,57 @@ from email.mime.multipart import MIMEMultipart
 app = Flask(__name__, static_folder='frontend', static_url_path='')
 CORS(app)
 init_db()
-# ── Daily Alert Scheduler ──
+
+# Config — Railway Variables-ல் இருந்து எடுக்கும்
+EMAIL = os.environ.get('EMAIL', 'sarathiilangovan@gmail.com')
+PASSWORD = os.environ.get('PASSWORD', 'utpu ldtu mksj xglh')
+TWILIO_SID = os.environ.get('TWILIO_SID', '')
+TWILIO_TOKEN = os.environ.get('TWILIO_TOKEN', '')
+TWILIO_NUMBER = os.environ.get('TWILIO_NUMBER', '')
+YOUR_NUMBER = os.environ.get('YOUR_NUMBER', '')
+
+def send_email_alert(product_name, expiry_date, quantity, to_email):
+    msg = MIMEMultipart()
+    msg['From'] = EMAIL
+    msg['To'] = to_email
+    msg['Subject'] = f"⚠️ StockTracker Alert: {product_name} Expiring Soon!"
+    body = f"""
+    ⚠️ Expiry Alert - StockTracker
+
+    Product  : {product_name}
+    Quantity : {quantity}
+    Expiry   : {expiry_date}
+
+    Please take action before the product expires!
+
+    - StockTracker System
+    """
+    msg.attach(MIMEText(body, 'plain'))
+    try:
+        server = smtplib.SMTP('smtp.gmail.com', 587)
+        server.starttls()
+        server.login(EMAIL, PASSWORD)
+        server.sendmail(EMAIL, to_email, msg.as_string())
+        server.quit()
+        return True
+    except Exception as e:
+        print(f"Email error: {e}")
+        return False
+
+def send_sms_alert(product_name, expiry_date, quantity):
+    try:
+        client = Client(TWILIO_SID, TWILIO_TOKEN)
+        message = client.messages.create(
+            body=f"⚠️ StockTracker Alert!\nProduct: {product_name}\nQuantity: {quantity}\nExpiry: {expiry_date}\nPlease take action!",
+            from_=TWILIO_NUMBER,
+            to=YOUR_NUMBER
+        )
+        print(f"SMS sent: {message.sid}")
+        return True
+    except Exception as e:
+        print(f"SMS error: {e}")
+        return False
+
 def daily_alert():
     print("🔔 Running daily alert check...")
     conn = get_db()
@@ -27,34 +78,16 @@ def daily_alert():
     conn.close()
     if expiring:
         for product in expiring:
-            send_email_alert(
-                product['name'],
-                product['expiry_date'],
-                product['quantity'],
-                EMAIL
-            )
-            send_sms_alert(
-                product['name'],
-                product['expiry_date'],
-                product['quantity']
-            )
+            send_email_alert(product['name'], product['expiry_date'], product['quantity'], EMAIL)
+            send_sms_alert(product['name'], product['expiry_date'], product['quantity'])
         print(f"✅ Alert sent for {len(expiring)} products!")
     else:
         print("✅ No expiring products today!")
 
-# Scheduler start பண்ணு
 scheduler = BackgroundScheduler()
 scheduler.add_job(daily_alert, 'cron', hour=9, minute=0)
 scheduler.start()
 
-EMAIL = "sarathiilangovan@gmail.com"
-PASSWORD = "utpu ldtu mksj xglh"
-
-# Twilio Config
-TWILIO_SID = "your_twilio_sid"
-TWILIO_TOKEN = "your_twilio_token"
-TWILIO_NUMBER = "your_twilio_number"
-YOUR_NUMBER = "your_number"
 @app.route('/')
 def index():
     return send_from_directory('frontend', 'index.html')
@@ -126,38 +159,12 @@ def get_stats():
         "total_stock": stock
     })
 
-def send_email_alert(product_name, expiry_date, quantity, to_email):
-    msg = MIMEMultipart()
-    msg['From'] = EMAIL
-    msg['To'] = to_email
-    msg['Subject'] = f"⚠️ StockTracker Alert: {product_name} Expiring Soon!"
-    body = f"""
-    ⚠️ Expiry Alert - StockTracker
-
-    Product  : {product_name}
-    Quantity : {quantity}
-    Expiry   : {expiry_date}
-
-    Please take action before the product expires!
-
-    - StockTracker System
-    """
-    msg.attach(MIMEText(body, 'plain'))
-    try:
-        server = smtplib.SMTP('smtp.gmail.com', 587)
-        server.starttls()
-        server.login(EMAIL, PASSWORD)
-        server.sendmail(EMAIL, to_email, msg.as_string())
-        server.quit()
-        return True
-    except Exception as e:
-        print(f"Email error: {e}")
-        return False
-
 @app.route('/api/send-alerts', methods=['POST'])
 def send_alerts():
     data = request.json
     to_email = data.get('email')
+    if not to_email:
+        return jsonify({"message": "❌ Email required!"})
     conn = get_db()
     cursor = conn.cursor()
     today = date.today().isoformat()
@@ -171,30 +178,9 @@ def send_alerts():
     if not expiring:
         return jsonify({"message": "✅ No expiring products!"})
     for product in expiring:
-        send_email_alert(
-            product['name'],
-            product['expiry_date'],
-            product['quantity'],
-            to_email
-        )
+        send_email_alert(product['name'], product['expiry_date'], product['quantity'], to_email)
     return jsonify({"message": f"✅ Alert sent for {len(expiring)} products!"})
 
-# ── SMS Alert Send பண்ண ──
-def send_sms_alert(product_name, expiry_date, quantity):
-    try:
-        client = Client(TWILIO_SID, TWILIO_TOKEN)
-        message = client.messages.create(
-            body=f"⚠️ StockTracker Alert!\nProduct: {product_name}\nQuantity: {quantity}\nExpiry: {expiry_date}\nPlease take action!",
-            from_=TWILIO_NUMBER,
-            to=YOUR_NUMBER
-        )
-        print(f"SMS sent: {message.sid}")
-        return True
-    except Exception as e:
-        print(f"SMS error: {e}")
-        return False
-
-# ── SMS Alert Route ──
 @app.route('/api/send-sms', methods=['POST'])
 def send_sms():
     conn = get_db()
@@ -210,14 +196,9 @@ def send_sms():
     if not expiring:
         return jsonify({"message": "✅ No expiring products!"})
     for product in expiring:
-        send_sms_alert(
-            product['name'],
-            product['expiry_date'],
-            product['quantity']
-        )
+        send_sms_alert(product['name'], product['expiry_date'], product['quantity'])
     return jsonify({"message": f"✅ SMS sent for {len(expiring)} products!"})
 
-# ── Register ──
 @app.route('/api/register', methods=['POST'])
 def register():
     data = request.json
@@ -236,7 +217,6 @@ def register():
         conn.close()
         return jsonify({"message": "❌ Email already exists!"})
 
-# ── Login ──
 @app.route('/api/login', methods=['POST'])
 def login():
     data = request.json
@@ -246,10 +226,9 @@ def login():
     user = cursor.fetchone()
     conn.close()
     if user and bcrypt.checkpw(data['password'].encode('utf-8'), user['password']):
-        return jsonify({"message": "✅ Login successful!", "name": user['name'], "role": user['role']})
+        return jsonify({"message": "✅ Login successful!", "name": user['name'], "role": user['role'], "email": user['email']})
     return jsonify({"message": "❌ Invalid email or password!"})
 
-# ── Login Page ──
 @app.route('/login')
 def login_page():
     return send_from_directory('frontend', 'login.html')
