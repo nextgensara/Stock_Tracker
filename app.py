@@ -8,7 +8,10 @@ import os
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 
-app = Flask(__name__, static_folder='frontend', static_url_path='')
+import os
+app = Flask(__name__, 
+    static_folder=os.path.join(os.path.dirname(__file__), 'frontend'),
+    static_url_path='')
 CORS(app)
 init_db()
 
