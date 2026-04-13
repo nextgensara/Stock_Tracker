@@ -2,7 +2,7 @@ from flask import Flask, jsonify, request, send_from_directory
 from flask_cors import CORS
 from database import get_db, init_db
 from datetime import date, timedelta
-import smtplib
+import resend
 import bcrypt
 import os
 from email.mime.text import MIMEText
@@ -17,30 +17,22 @@ init_db()
 
 EMAIL = os.environ.get('EMAIL', 'sarathiilangovan@gmail.com')
 PASSWORD = os.environ.get('PASSWORD', 'utpu ldtu mksj xglh')
-
 def send_email_alert(product_name, expiry_date, quantity, to_email):
-    msg = MIMEMultipart()
-    msg['From'] = EMAIL
-    msg['To'] = to_email
-    msg['Subject'] = f"⚠️ StockTracker Alert: {product_name} Expiring Soon!"
-    body = f"""
-    ⚠️ Expiry Alert - StockTracker
-
-    Product  : {product_name}
-    Quantity : {quantity}
-    Expiry   : {expiry_date}
-
-    Please take action before the product expires!
-
-    - StockTracker System
-    """
-    msg.attach(MIMEText(body, 'plain'))
     try:
-        server = smtplib.SMTP('smtp.gmail.com', 587, timeout=10)
-        server.starttls()
-        server.login(EMAIL, PASSWORD)
-        server.sendmail(EMAIL, to_email, msg.as_string())
-        server.quit()
+        resend.api_key = os.environ.get('RESEND_API_KEY', '')
+        resend.Emails.send({
+            "from": "StockTracker <onboarding@resend.dev>",
+            "to": to_email,
+            "subject": f"⚠️ StockTracker Alert: {product_name} Expiring Soon!",
+            "html": f"""
+            <h2>⚠️ Expiry Alert - StockTracker</h2>
+            <p><b>Product:</b> {product_name}</p>
+            <p><b>Quantity:</b> {quantity}</p>
+            <p><b>Expiry:</b> {expiry_date}</p>
+            <p>Please take action before the product expires!</p>
+            <p>- StockTracker System</p>
+            """
+        })
         return True
     except Exception as e:
         print(f"Email error: {e}")
