@@ -132,7 +132,7 @@ async function sendAlerts() {
 
   for (const product of alerts) {
     await emailjs.send(
-      "service_qwxuyjq",
+      "service_nsve4oo",
       "template_ajcyi4h",
       {
         to_email: email,
