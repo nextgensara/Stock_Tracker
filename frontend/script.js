@@ -159,7 +159,7 @@ async function loadCharts() {
     products.forEach(p => {
       const today = new Date();
       const expiry = new Date(p.expiry_date);
-      const daysLeft = Math.ceil((expiry - today) / (1000 * 60 * 60 * 24));
+      const daysLeft = Math.floor((expiry - today) / (1000 * 60 * 60 * 24));
       if (daysLeft <= 0) expired++;
       else if (daysLeft <= 7) warning++;
       else good++;
