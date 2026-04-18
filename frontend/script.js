@@ -109,23 +109,40 @@ async function deleteProduct(id) {
   loadCharts();
 }
 
+// EmailJS Initialize
+emailjs.init("bEYPLUQgJnXnK6GAe");
+
 async function sendAlerts() {
-  const email = document.getElementById('alert-email').value;
+  const user = JSON.parse(localStorage.getItem('user'));
+  const emailInput = document.getElementById('alert-email').value;
+  const email = emailInput || user.email;
+
   if (!email) {
     alert('⚠️ Email address enter பண்ணுங்க!');
     return;
   }
-  try {
-    const res = await fetch('/api/send-alerts', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email: email })
-    });
-    const data = await res.json();
-    alert(data.message);
-  } catch(err) {
-    alert('❌ Error: ' + err.message);
+
+  const res = await fetch('/api/alerts');
+  const alerts = await res.json();
+
+  if (alerts.length === 0) {
+    alert('✅ No expiring products!');
+    return;
   }
+
+  for (const product of alerts) {
+    await emailjs.send(
+      "service_qwxuyjq",
+      "template_ajcyi4h",
+      {
+        to_email: email,
+        product_name: product.name,
+        quantity: product.quantity,
+        expiry_date: product.expiry_date
+      }
+    );
+  }
+  alert(`✅ Alert sent for ${alerts.length} products!`);
 }
 
 async function loadCharts() {
