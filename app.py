@@ -168,6 +168,38 @@ def login_page():
 def serve_chart():
     return send_from_directory('frontend', 'chart.js')
 
+@app.route('/api/send-sms', methods=['POST'])
+def send_sms():
+    try:
+        from twilio.rest import Client
+        TWILIO_SID = os.environ.get('TWILIO_SID', '')
+        TWILIO_TOKEN = os.environ.get('TWILIO_TOKEN', '')
+        TWILIO_NUMBER = os.environ.get('TWILIO_NUMBER', '')
+        YOUR_NUMBER = os.environ.get('YOUR_NUMBER', '')
+        conn = get_db()
+        cursor = conn.cursor()
+        today = date.today().isoformat()
+        alert_date = (date.today() + timedelta(days=7)).isoformat()
+        cursor.execute(
+            "SELECT * FROM products WHERE expiry_date BETWEEN ? AND ?",
+            (today, alert_date)
+        )
+        expiring = [dict(row) for row in cursor.fetchall()]
+        conn.close()
+        if not expiring:
+            return jsonify({"message": "✅ No expiring products!"})
+        client = Client(TWILIO_SID, TWILIO_TOKEN)
+        for product in expiring:
+            client.messages.create(
+                body=f"⚠️ StockTracker Alert!\nProduct: {product['name']}\nQty: {product['quantity']}\nExpiry: {product['expiry_date']}",
+                from_=TWILIO_NUMBER,
+                to=YOUR_NUMBER
+            )
+        return jsonify({"message": f"✅ SMS sent for {len(expiring)} products!"})
+    except Exception as e:
+        print(f"SMS error: {e}")
+        return jsonify({"message": f"❌ SMS error: {str(e)}"})
+
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
     app.run(debug=False, host='0.0.0.0', port=port)
