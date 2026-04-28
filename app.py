@@ -44,9 +44,13 @@ def index():
 
 @app.route('/api/products', methods=['GET'])
 def get_products():
+    user_id = request.args.get('user_id')
     conn = get_db()
     cursor = conn.cursor()
-    cursor.execute("SELECT * FROM products ORDER BY expiry_date ASC")
+    if user_id:
+        cursor.execute("SELECT * FROM products WHERE user_id=? ORDER BY expiry_date ASC", (user_id,))
+    else:
+        cursor.execute("SELECT * FROM products ORDER BY expiry_date ASC")
     products = [dict(row) for row in cursor.fetchall()]
     conn.close()
     return jsonify(products)
@@ -54,11 +58,12 @@ def get_products():
 @app.route('/api/products', methods=['POST'])
 def add_product():
     data = request.json
+    user_id = data.get('user_id')
     conn = get_db()
     cursor = conn.cursor()
     cursor.execute(
-        "INSERT INTO products (name, category, quantity, expiry_date) VALUES (?, ?, ?, ?)",
-        (data['name'], data['category'], data['quantity'], data['expiry_date'])
+        "INSERT INTO products (name, category, quantity, expiry_date, user_id) VALUES (?, ?, ?, ?, ?)",
+        (data['name'], data['category'], data['quantity'], data['expiry_date'], user_id)
     )
     conn.commit()
     conn.close()
@@ -72,35 +77,54 @@ def delete_product(id):
     conn.commit()
     conn.close()
     return jsonify({"message": "✅ Deleted!"})
-
 @app.route('/api/alerts', methods=['GET'])
 def get_alerts():
+    user_id = request.args.get('user_id')
     conn = get_db()
     cursor = conn.cursor()
     today = date.today().isoformat()
     alert_date = (date.today() + timedelta(days=7)).isoformat()
-    cursor.execute(
-        "SELECT * FROM products WHERE expiry_date BETWEEN ? AND ?",
-        (today, alert_date)
-    )
+    if user_id:
+        cursor.execute(
+            "SELECT * FROM products WHERE expiry_date BETWEEN ? AND ? AND user_id=?",
+            (today, alert_date, user_id)
+        )
+    else:
+        cursor.execute(
+            "SELECT * FROM products WHERE expiry_date BETWEEN ? AND ?",
+            (today, alert_date)
+        )
+    
     alerts = [dict(row) for row in cursor.fetchall()]
     conn.close()
     return jsonify(alerts)
-
 @app.route('/api/stats', methods=['GET'])
 def get_stats():
+    user_id = request.args.get('user_id')
     conn = get_db()
     cursor = conn.cursor()
-    cursor.execute("SELECT COUNT(*) as total FROM products")
+    if user_id:
+        cursor.execute("SELECT COUNT(*) as total FROM products WHERE user_id=?", (user_id,))
+    else:
+        cursor.execute("SELECT COUNT(*) as total FROM products")
     total = cursor.fetchone()['total']
     today = date.today().isoformat()
     alert_date = (date.today() + timedelta(days=7)).isoformat()
-    cursor.execute(
-        "SELECT COUNT(*) as expiring FROM products WHERE expiry_date BETWEEN ? AND ?",
-        (today, alert_date)
-    )
+    if user_id:
+        cursor.execute(
+            "SELECT COUNT(*) as expiring FROM products WHERE expiry_date BETWEEN ? AND ? AND user_id=?",
+            (today, alert_date, user_id)
+        )
+    else:
+        cursor.execute(
+            "SELECT COUNT(*) as expiring FROM products WHERE expiry_date BETWEEN ? AND ?",
+            (today, alert_date)
+        )
     expiring = cursor.fetchone()['expiring']
-    cursor.execute("SELECT SUM(quantity) as stock FROM products")
+    if user_id:
+        cursor.execute("SELECT SUM(quantity) as stock FROM products WHERE user_id=?", (user_id,))
+    else:
+        cursor.execute("SELECT SUM(quantity) as stock FROM products")
     stock = cursor.fetchone()['stock'] or 0
     conn.close()
     return jsonify({
@@ -157,8 +181,8 @@ def login():
     user = cursor.fetchone()
     conn.close()
     if user and bcrypt.checkpw(data['password'].encode('utf-8'), user['password']):
-        return jsonify({"message": "✅ Login successful!", "name": user['name'], "role": user['role'], "email": user['email']})
-    return jsonify({"message": "❌ Invalid email or password!"})
+      return jsonify({"message": "✅ Login successful!", "name": user['name'], "role": user['role'], "email": user['email'], "id": user['id']})
+      return jsonify({"message": "❌ Invalid email or password!"})
 
 @app.route('/login')
 def login_page():

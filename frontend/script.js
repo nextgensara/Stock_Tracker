@@ -2,15 +2,18 @@ let categoryChart = null;
 let expiryChart = null;
 
 async function loadStats() {
-  const res = await fetch('/api/stats');
+  const user = JSON.parse(localStorage.getItem('user'));
+  const user_id = user ? user.id : '';
+  const res = await fetch(`/api/stats?user_id=${user_id}`);
   const data = await res.json();
   document.getElementById('total-products').textContent = data.total_products;
   document.getElementById('expiring-soon').textContent = data.expiring_soon;
   document.getElementById('total-stock').textContent = data.total_stock;
 }
-
 async function loadProducts() {
-  const res = await fetch('/api/products');
+  const user = JSON.parse(localStorage.getItem('user'));
+  const user_id = user ? user.id : '';
+  const res = await fetch(`/api/products?user_id=${user_id}`);
   const products = await res.json();
   const tbody = document.getElementById('products-table');
   if (products.length === 0) {
@@ -45,10 +48,10 @@ async function loadProducts() {
       </tr>
     `;
   });
-}
-
-async function loadAlerts() {
-  const res = await fetch('/api/alerts');
+}async function loadAlerts() {
+  const user = JSON.parse(localStorage.getItem('user'));
+  const user_id = user ? user.id : '';
+  const res = await fetch(`/api/alerts?user_id=${user_id}`);
   const alerts = await res.json();
   const alertsList = document.getElementById('alerts-list');
   const alertCount = document.getElementById('alert-count');
@@ -80,11 +83,14 @@ async function addProduct() {
     alert('⚠️ எல்லா fields-உம் fill பண்ணுங்க!');
     return;
   }
+  const user = JSON.parse(localStorage.getItem('user'));
+  const user_id = user ? user.id : '';
   const res = await fetch('/api/products', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ name, category, quantity, expiry_date })
+    body: JSON.stringify({ name, category, quantity, expiry_date, user_id })
   });
+  
   const data = await res.json();
   alert(data.message);
   document.getElementById('name').value = '';
@@ -271,7 +277,12 @@ async function loadCharts() {
   }
 }
 
+
 window.onload = function() {
+  const user = JSON.parse(localStorage.getItem('user'));
+  if (user && user.email) {
+    document.getElementById('alert-email').value = user.email;
+  }
   loadStats();
   loadProducts();
   loadAlerts();
