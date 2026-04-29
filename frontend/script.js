@@ -80,8 +80,8 @@ async function addProduct() {
   const quantity = document.getElementById('quantity').value;
   const expiry_date = document.getElementById('expiry_date').value;
   if (!name || !quantity || !expiry_date) {
-    alert('⚠️ எல்லா fields-உம் fill பண்ணுங்க!');
-    return;
+    alert('⚠️  Fill all fields!');
+    return; 
   }
   const user = JSON.parse(localStorage.getItem('user'));
   const user_id = user ? user.id : '';
@@ -124,7 +124,7 @@ async function sendAlerts() {
   const email = emailInput || user.email;
 
   if (!email) {
-    alert('⚠️ Email address enter பண்ணுங்க!');
+    alert('⚠️ please enter email address!');
     return;
   }
 
