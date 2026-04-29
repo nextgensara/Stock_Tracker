@@ -103,7 +103,7 @@ async function addProduct() {
 }
 
 async function deleteProduct(id) {
-  if (!confirm('Delete பண்ணணுமா?')) return;
+ if (!confirm('Are you sure you want to delete?')) return;
   const res = await fetch(`/api/products/${id}`, {
     method: 'DELETE'
   });
