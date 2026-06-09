@@ -138,21 +138,51 @@ def send_alerts():
     to_email = data.get('email')
     if not to_email:
         return jsonify({"message": "❌ Email required!"})
+    
     conn = get_db()
     cursor = conn.cursor()
     today = date.today().isoformat()
-    alert_date = (date.today() + timedelta(days=7)).isoformat()
+    tomorrow = (date.today() + timedelta(days=1)).isoformat()
+    
+    # Expiring tomorrow
     cursor.execute(
-        "SELECT * FROM products WHERE expiry_date BETWEEN ? AND ?",
-        (today, alert_date)
+        "SELECT * FROM products WHERE expiry_date = ?",
+        (tomorrow,)
     )
-    expiring = [dict(row) for row in cursor.fetchall()]
+    expiring_tomorrow = [dict(row) for row in cursor.fetchall()]
+    
+    # Expired today
+    cursor.execute(
+        "SELECT * FROM products WHERE expiry_date = ?",
+        (today,)
+    )
+    expired_today = [dict(row) for row in cursor.fetchall()]
+    
     conn.close()
-    if not expiring:
-        return jsonify({"message": "✅ No expiring products!"})
-    for product in expiring:
-        send_email_alert(product['name'], product['expiry_date'], product['quantity'], to_email)
-    return jsonify({"message": f"✅ Alert sent for {len(expiring)} products!"})
+    
+    if not expiring_tomorrow and not expired_today:
+        return jsonify({"message": "✅ No alerts today!"})
+    
+    # Send expiring tomorrow alerts
+    for product in expiring_tomorrow:
+        send_email_alert(
+            f"⚠️ EXPIRING TOMORROW: {product['name']}",
+            product['expiry_date'],
+            product['quantity'],
+            to_email
+        )
+    
+    # Send expired today alerts
+    for product in expired_today:
+        send_email_alert(
+            f"❌ EXPIRED TODAY: {product['name']}",
+            product['expiry_date'],
+            product['quantity'],
+            to_email
+        )
+    
+    total = len(expiring_tomorrow) + len(expired_today)
+    return jsonify({"message": f"✅ Alert sent for {total} products!"})
 
 @app.route('/api/register', methods=['POST'])
 def register():
