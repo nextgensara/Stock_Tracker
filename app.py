@@ -3,6 +3,7 @@ from flask_cors import CORS
 from database import get_db, init_db
 from datetime import date, timedelta
 import resend
+from apscheduler.schedulers.background import BackgroundScheduler
 import bcrypt
 import os
 from email.mime.text import MIMEText
@@ -14,6 +15,64 @@ app = Flask(__name__,
     static_url_path='')
 CORS(app)
 init_db()
+# ── Daily Automatic Alert ──
+def daily_alert():
+    print("🔔 Running daily alert check...")
+    conn = get_db()
+    cursor = conn.cursor()
+    today = date.today().isoformat()
+    tomorrow = (date.today() + timedelta(days=1)).isoformat()
+    
+    # Get all users
+    cursor.execute("SELECT id, email FROM users")
+    users = [dict(row) for row in cursor.fetchall()]
+    
+    for user in users:
+        user_id = user['id']
+        to_email = user['email']
+        
+        # Expiring tomorrow
+        cursor.execute(
+            "SELECT * FROM products WHERE expiry_date = ? AND user_id = ?",
+            (tomorrow, user_id)
+        )
+        expiring_tomorrow = [dict(row) for row in cursor.fetchall()]
+        
+        # Expired
+        cursor.execute(
+            "SELECT * FROM products WHERE expiry_date <= ? AND user_id = ?",
+            (today, user_id)
+        )
+        expired = [dict(row) for row in cursor.fetchall()]
+        
+        # Send alerts
+        for product in expiring_tomorrow:
+            send_email_alert(
+                f"⚠️ EXPIRING TOMORROW: {product['name']}",
+                product['expiry_date'],
+                product['quantity'],
+                to_email
+            )
+        
+        for product in expired:
+            send_email_alert(
+                f"❌ EXPIRED: {product['name']}",
+                product['expiry_date'],
+                product['quantity'],
+                to_email
+            )
+    
+    conn.close()
+    print("✅ Daily alert done!")
+
+# Scheduler
+try:
+    scheduler = BackgroundScheduler()
+    scheduler.add_job(daily_alert, 'cron', hour=9, minute=0)
+    scheduler.start()
+    print("✅ Scheduler started!")
+except Exception as e:
+    print(f"Scheduler error: {e}")
 
 EMAIL = os.environ.get('EMAIL', 'sarathiilangovan@gmail.com')
 PASSWORD = os.environ.get('PASSWORD', 'utpu ldtu mksj xglh')
