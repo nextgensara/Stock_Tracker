@@ -253,6 +253,66 @@ def send_sms():
     except Exception as e:
         print(f"SMS error: {e}")
         return jsonify({"message": f"❌ SMS error: {str(e)}"})
+        # ── Admin Panel ──
+@app.route('/admin')
+def admin_panel():
+    key = request.args.get('key')
+    if key != 'sarsh1234': 
+        return jsonify({"message": "❌ Unauthorized!"}), 401
+    
+    conn = get_db()
+    cursor = conn.cursor()
+    
+    # All users
+    cursor.execute("SELECT id, name, email, role FROM users")
+    users = [dict(row) for row in cursor.fetchall()]
+    
+    # All products with user info
+    cursor.execute("""
+        SELECT p.*, u.name as user_name, u.email as user_email 
+        FROM products p 
+        LEFT JOIN users u ON p.user_id = u.id 
+        ORDER BY p.expiry_date ASC
+    """)
+    products = [dict(row) for row in cursor.fetchall()]
+    conn.close()
+    
+    
+    html = f"""
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <title>StockTracker Admin</title>
+        <style>
+            body {{ background: #0a0f1e; color: #f0f4ff; font-family: Arial; padding: 20px; }}
+            h1, h2 {{ color: #00ffcc; }}
+            table {{ width: 100%; border-collapse: collapse; margin-bottom: 40px; }}
+            th {{ background: #1a2235; color: #00ffcc; padding: 10px; text-align: left; }}
+            td {{ padding: 10px; border-bottom: 1px solid #1a2235; }}
+            tr:hover td {{ background: rgba(0,255,200,0.05); }}
+            .expired {{ color: #ff3366; }}
+            .expiring {{ color: #ffaa00; }}
+            .good {{ color: #00ffcc; }}
+        </style>
+    </head>
+    <body>
+        <h1>⚡ StockTracker Admin Panel</h1>
+        
+        <h2>👥 Users ({len(users)})</h2>
+        <table>
+            <tr><th>ID</th><th>Name</th><th>Email</th><th>Role</th></tr>
+            {''.join(f"<tr><td>{u['id']}</td><td>{u['name']}</td><td>{u['email']}</td><td>{u['role']}</td></tr>" for u in users)}
+        </table>
+        
+        <h2>📦 All Products ({len(products)})</h2>
+        <table>
+            <tr><th>ID</th><th>Name</th><th>Category</th><th>Qty</th><th>Expiry</th><th>User</th><th>Email</th></tr>
+            {''.join(f"<tr><td>{p['id']}</td><td>{p['name']}</td><td>{p['category']}</td><td>{p['quantity']}</td><td>{p['expiry_date']}</td><td>{p.get('user_name','')}</td><td>{p.get('user_email','')}</td></tr>" for p in products)}
+        </table>
+    </body>
+    </html>
+    """
+    return html
 
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
