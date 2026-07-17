@@ -3,13 +3,16 @@ from flask_cors import CORS
 from database import get_db, init_db
 from datetime import date, timedelta
 import resend
-from apscheduler.schedulers.background import BackgroundScheduler
 import bcrypt
 import os
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 
 import os
+try:
+ from twilio.rest import Client
+except Exception:
+    Client = None
 app = Flask(__name__, 
     static_folder=os.path.join(os.path.dirname(__file__), 'frontend'),
     static_url_path='')
@@ -21,58 +24,51 @@ def daily_alert():
     conn = get_db()
     cursor = conn.cursor()
     today = date.today().isoformat()
-    tomorrow = (date.today() + timedelta(days=1)).isoformat()
+    two_days_later = (date.today() + timedelta(days=2)).isoformat()
     
-    # Get all users
-    cursor.execute("SELECT id, email FROM users")
+    cursor.execute("SELECT id, email, phone FROM users")
     users = [dict(row) for row in cursor.fetchall()]
     
     for user in users:
         user_id = user['id']
         to_email = user['email']
-        
-        # Expiring tomorrow
+        to_phone = user.get('phone')
+
         cursor.execute(
-            "SELECT * FROM products WHERE expiry_date = ? AND user_id = ?",
-            (tomorrow, user_id)
+            "SELECT * FROM products WHERE expiry_date BETWEEN ? AND ? AND user_id = ?",
+            (today, two_days_later, user_id)
         )
-        expiring_tomorrow = [dict(row) for row in cursor.fetchall()]
+        expiring_soon = [dict(row) for row in cursor.fetchall()]
         
-        # Expired
-        cursor.execute(
-            "SELECT * FROM products WHERE expiry_date <= ? AND user_id = ?",
-            (today, user_id)
-        )
-        expired = [dict(row) for row in cursor.fetchall()]
-        
-        # Send alerts
-        for product in expiring_tomorrow:
+        for product in expiring_soon:
+            from datetime import datetime
+            exp = datetime.strptime(product['expiry_date'], "%Y-%m-%d").date()
+            days_left = (exp - date.today()).days
+            label = "⚠️ EXPIRES TOMORROW" if days_left == 1 else "🔔 EXPIRES IN 2 DAYS"
+            
             send_email_alert(
-                f"⚠️ EXPIRING TOMORROW: {product['name']}",
+                f"{label}: {product['name']}",
                 product['expiry_date'],
                 product['quantity'],
                 to_email
             )
-        
-        for product in expired:
-            send_email_alert(
-                f"❌ EXPIRED: {product['name']}",
+            if to_phone:
+                send_whatsapp_alert(
+                f"{label}: {product['name']}",
                 product['expiry_date'],
                 product['quantity'],
-                to_email
+                to_phone
             )
     
     conn.close()
     print("✅ Daily alert done!")
-
-# Scheduler
-try:
-    scheduler = BackgroundScheduler()
-    scheduler.add_job(daily_alert, 'cron', hour=9, minute=0)
-    scheduler.start()
-    print("✅ Scheduler started!")
-except Exception as e:
-    print(f"Scheduler error: {e}")
+@app.route('/check-expiry')
+def check_expiry():
+    try:
+        daily_alert()
+        return jsonify({"status": "✅ Expiry check done!"}), 200
+    except Exception as e:
+        return jsonify({"status": f"❌ Error: {str(e)}"}), 500
 
 EMAIL = os.environ.get('EMAIL', 'sarathiilangovan@gmail.com')
 PASSWORD = os.environ.get('PASSWORD', 'utpu ldtu mksj xglh')
@@ -95,6 +91,23 @@ def send_email_alert(product_name, expiry_date, quantity, to_email):
         return True
     except Exception as e:
         print(f"Email error: {e}")
+        return False
+    def send_whatsapp_alert(product_name, expiry_date, quantity, to_phone):
+    try:
+        if Client is None:
+            print("Twilio not installed")
+            return False
+        TWILIO_SID = os.environ.get('TWILIO_SID', '')
+        TWILIO_TOKEN = os.environ.get('TWILIO_TOKEN', '')
+        client = Client(TWILIO_SID, TWILIO_TOKEN)
+        client.messages.create(
+            from_='whatsapp:+14155238886',
+            body=f"⚠️ StockTracker Alert\nProduct: {product_name}\nQty: {quantity}\nExpiry: {expiry_date}",
+            to=f"whatsapp:{to_phone}"
+        )
+        return True
+    except Exception as e:
+        print(f"WhatsApp error: {e}")
         return False
 
 @app.route('/')
