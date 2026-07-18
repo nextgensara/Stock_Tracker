@@ -102,7 +102,7 @@ def send_whatsapp_alert(product_name, expiry_date, quantity, to_phone):
         client = Client(TWILIO_SID, TWILIO_TOKEN)
         client.messages.create(
             from_='whatsapp:+14155238886',
-            body=f"Alert: {product_name}, Qty: {quantity}, Expiry: {expiry_date}",
+            body=f"⚠️ StockTracker Alert!\n\n{product_name} is expiring soon!\n📦 Quantity: {quantity}\n📅 Expiry Date: {expiry_date}\n\nPlease take action before it expires!",
             to=f"whatsapp:{to_phone}"
         )
         return True
