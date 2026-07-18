@@ -297,7 +297,7 @@ def serve_chart():
 @app.route('/api/send-sms', methods=['POST'])
 def send_sms():
     try:
-        from twilio.rest import Client
+        from datetime import datetime
         TWILIO_SID = os.environ.get('TWILIO_SID', '')
         TWILIO_TOKEN = os.environ.get('TWILIO_TOKEN', '')
         TWILIO_NUMBER = os.environ.get('TWILIO_NUMBER', '')
@@ -312,18 +312,36 @@ def send_sms():
         )
         expiring = [dict(row) for row in cursor.fetchall()]
         conn.close()
+
         if not expiring:
             return jsonify({"message": "✅ No expiring products!"})
+
+        if not TWILIO_SID or not TWILIO_TOKEN or not TWILIO_NUMBER or not YOUR_NUMBER:
+            return jsonify({"message": "❌ Twilio settings are not configured."}), 500
+
         client = Client(TWILIO_SID, TWILIO_TOKEN)
         for product in expiring:
+            exp = datetime.strptime(product['expiry_date'], "%Y-%m-%d").date()
+            days_left = (exp - date.today()).days
+            if days_left < 0:
+                label = "❌ EXPIRED"
+            elif days_left == 0:
+                label = "⚠️ EXPIRES TODAY"
+            elif days_left == 1:
+                label = "⚠️ EXPIRES TOMORROW"
+            else:
+                label = f"🔔 EXPIRES IN {days_left} DAYS"
+
             client.messages.create(
-                body=f"⚠️ StockTracker Alert!\nProduct: {product['name']}\nQty: {product['quantity']}\nExpiry: {product['expiry_date']}",
+                body=f"{label}\n⚠️ StockTracker Alert!\nProduct: {product['name']}\nQty: {product['quantity']}\nExpiry: {product['expiry_date']}",
                 from_=TWILIO_NUMBER,
                 to=YOUR_NUMBER
             )
+
         return jsonify({"message": f"✅ SMS sent for {len(expiring)} products!"})
     except Exception as e:
         print(f"SMS error: {e}")
+        return jsonify({"message": f"❌ SMS error: {str(e)}"}), 500
         return jsonify({"message": "❌ SMS error occurred."}), 500
 
 @app.route('/api/send-whatsapp-alert', methods=['POST'])
@@ -348,9 +366,21 @@ def send_whatsapp_alert_route():
         if not expiring:
             return jsonify({"message": "✅ No expiring products!"})
 
+        from datetime import datetime
         for product in expiring:
+            exp = datetime.strptime(product['expiry_date'], "%Y-%m-%d").date()
+            days_left = (exp - date.today()).days
+            if days_left < 0:
+                label = "❌ EXPIRED"
+            elif days_left == 0:
+                label = "⚠️ EXPIRES TODAY"
+            elif days_left == 1:
+                label = "⚠️ EXPIRES TOMORROW"
+            else:
+                label = f"🔔 EXPIRES IN {days_left} DAYS"
+
             send_whatsapp_alert(
-                product['name'],
+                f"{label}: {product['name']}",
                 product['expiry_date'],
                 product['quantity'],
                 to_phone
