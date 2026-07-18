@@ -41,6 +41,9 @@ async function loadProducts() {
         <td>${p.expiry_date}</td>
         <td>${status}</td>
         <td>
+          <button class="btn-add" style="padding:5px 14px;font-size:0.7rem;margin-right:6px;" onclick='editProduct(${JSON.stringify(p)})'>
+            ✏️ Edit
+          </button>
           <button class="btn-delete" onclick="deleteProduct(${p.id})">
             🗑️ Delete
           </button>
@@ -74,6 +77,18 @@ async function loadProducts() {
   });
 }
 
+let editingId = null;
+
+function editProduct(product) {
+  document.getElementById('name').value = product.name;
+  document.getElementById('category').value = product.category;
+  document.getElementById('quantity').value = product.quantity;
+  document.getElementById('expiry_date').value = product.expiry_date;
+  editingId = product.id;
+  document.querySelector('.btn-add[onclick="addProduct()"]').textContent = '💾 Update Product';
+  document.getElementById('products').scrollIntoView({ behavior: 'smooth' });
+}
+
 async function addProduct() {
   const name = document.getElementById('name').value;
   const category = document.getElementById('category').value;
@@ -85,14 +100,27 @@ async function addProduct() {
   }
   const user = JSON.parse(localStorage.getItem('user'));
   const user_id = user ? user.id : '';
-  const res = await fetch('/api/products', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ name, category, quantity, expiry_date, user_id })
-  });
-  
-  const data = await res.json();
-  alert(data.message);
+
+  if (editingId) {
+    const res = await fetch(`/api/products/${editingId}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name, category, quantity, expiry_date })
+    });
+    const data = await res.json();
+    alert(data.message);
+    editingId = null;
+    document.querySelector('.btn-add[onclick="addProduct()"]').textContent = '➕ Add Product';
+  } else {
+    const res = await fetch('/api/products', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name, category, quantity, expiry_date, user_id })
+    });
+    const data = await res.json();
+    alert(data.message);
+  }
+
   document.getElementById('name').value = '';
   document.getElementById('quantity').value = '';
   document.getElementById('expiry_date').value = '';

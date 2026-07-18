@@ -149,6 +149,18 @@ def delete_product(id):
     conn.commit()
     conn.close()
     return jsonify({"message": "✅ Deleted!"})
+@app.route('/api/products/<int:id>', methods=['PUT'])
+def update_product(id):
+    data = request.json
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute(
+        "UPDATE products SET name=?, category=?, quantity=?, expiry_date=? WHERE id=?",
+        (data['name'], data['category'], data['quantity'], data['expiry_date'], id)
+    )
+    conn.commit()
+    conn.close()
+    return jsonify({"message": "✅ Product updated!"})
 @app.route('/api/alerts', methods=['GET'])
 def get_alerts():
     user_id = request.args.get('user_id')
