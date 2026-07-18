@@ -283,8 +283,8 @@ def login():
     user = cursor.fetchone()
     conn.close()
     if user and bcrypt.checkpw(data['password'].encode('utf-8'), user['password']):
-      return jsonify({"message": "✅ Login successful!", "name": user['name'], "role": user['role'], "email": user['email'], "id": user['id']})
-      return jsonify({"message": "❌ Invalid email or password!"})
+        return jsonify({"message": "✅ Login successful!", "name": user['name'], "role": user['role'], "email": user['email'], "id": user['id']})
+    return jsonify({"message": "❌ Invalid email or password!"})
 
 @app.route('/login')
 def login_page():
@@ -324,35 +324,42 @@ def send_sms():
         return jsonify({"message": f"✅ SMS sent for {len(expiring)} products!"})
     except Exception as e:
         print(f"SMS error: {e}")
-        return jsonify({"message": f"❌ SMS error: {str(e)}"})
-    data = request.json
-    to_phone = data.get('phone')
-    if not to_phone:
-      return jsonify({"message": "❌ Phone number required!"})
+        return jsonify({"message": "❌ SMS error occurred."}), 500
 
-    conn = get_db()
-    cursor = conn.cursor()
-    today = date.today().isoformat()
-    alert_date = (date.today() + timedelta(days=7)).isoformat()
-    cursor.execute(
-        "SELECT * FROM products WHERE expiry_date BETWEEN ? AND ?",
-        (today, alert_date)
-    )
-    expiring = [dict(row) for row in cursor.fetchall()]
-    conn.close()
+@app.route('/api/send-whatsapp-alert', methods=['POST'])
+def send_whatsapp_alert_route():
+    try:
+        data = request.json
+        to_phone = data.get('phone')
+        if not to_phone:
+            return jsonify({"message": "❌ Phone number required!"})
 
-    if not expiring:
-        return jsonify({"message": "✅ No expiring products!"})
-
-    for product in expiring:
-        send_whatsapp_alert(
-            product['name'],
-            product['expiry_date'],
-            product['quantity'],
-            to_phone
+        conn = get_db()
+        cursor = conn.cursor()
+        today = date.today().isoformat()
+        alert_date = (date.today() + timedelta(days=7)).isoformat()
+        cursor.execute(
+            "SELECT * FROM products WHERE expiry_date BETWEEN ? AND ?",
+            (today, alert_date)
         )
+        expiring = [dict(row) for row in cursor.fetchall()]
+        conn.close()
 
-    return jsonify({"message": f"✅ WhatsApp alert sent for {len(expiring)} products!"})
+        if not expiring:
+            return jsonify({"message": "✅ No expiring products!"})
+
+        for product in expiring:
+            send_whatsapp_alert(
+                product['name'],
+                product['expiry_date'],
+                product['quantity'],
+                to_phone
+            )
+
+        return jsonify({"message": f"✅ WhatsApp alert sent for {len(expiring)} products!"})
+    except Exception as e:
+        print(f"WhatsApp alert error: {e}")
+        return jsonify({"message": f"❌ WhatsApp alert error: {str(e)}"}), 500
     # ── Admin Panel ──
 @app.route('/admin')
 def admin_panel():
