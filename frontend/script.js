@@ -150,7 +150,23 @@ async function sendAlerts() {
   }
   alert(`✅ Alert sent for ${alerts.length} products!`);
 }
+async function sendWhatsappAlerts() {
+  const phoneInput = document.getElementById('alert-phone').value;
 
+  if (!phoneInput) {
+    alert('⚠️ please enter WhatsApp number!');
+    return;
+  }
+
+  const res = await fetch('/api/send-whatsapp-alert', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ phone: phoneInput })
+  });
+
+  const data = await res.json();
+  alert(data.message);
+}
 async function loadCharts() {
   try {
     const res = await fetch('/api/products');

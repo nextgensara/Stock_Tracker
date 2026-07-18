@@ -325,6 +325,36 @@ def send_sms():
     except Exception as e:
         print(f"SMS error: {e}")
         return jsonify({"message": f"❌ SMS error: {str(e)}"})
+    @app.route('/api/send-whatsapp-alert', methods=['POST'])
+def send_whatsapp_alert_route():
+    data = request.json
+    to_phone = data.get('phone')
+    if not to_phone:
+        return jsonify({"message": "❌ Phone number required!"})
+
+    conn = get_db()
+    cursor = conn.cursor()
+    today = date.today().isoformat()
+    alert_date = (date.today() + timedelta(days=7)).isoformat()
+    cursor.execute(
+        "SELECT * FROM products WHERE expiry_date BETWEEN ? AND ?",
+        (today, alert_date)
+    )
+    expiring = [dict(row) for row in cursor.fetchall()]
+    conn.close()
+
+    if not expiring:
+        return jsonify({"message": "✅ No expiring products!"})
+
+    for product in expiring:
+        send_whatsapp_alert(
+            product['name'],
+            product['expiry_date'],
+            product['quantity'],
+            to_phone
+        )
+
+    return jsonify({"message": f"✅ WhatsApp alert sent for {len(expiring)} products!"})
         # ── Admin Panel ──
 @app.route('/admin')
 def admin_panel():
