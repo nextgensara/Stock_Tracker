@@ -325,12 +325,10 @@ def send_sms():
     except Exception as e:
         print(f"SMS error: {e}")
         return jsonify({"message": f"❌ SMS error: {str(e)}"})
-    @app.route('/api/send-whatsapp-alert', methods=['POST'])
-def send_whatsapp_alert_route():
     data = request.json
     to_phone = data.get('phone')
     if not to_phone:
-        return jsonify({"message": "❌ Phone number required!"})
+      return jsonify({"message": "❌ Phone number required!"})
 
     conn = get_db()
     cursor = conn.cursor()
@@ -355,7 +353,7 @@ def send_whatsapp_alert_route():
         )
 
     return jsonify({"message": f"✅ WhatsApp alert sent for {len(expiring)} products!"})
-        # ── Admin Panel ──
+    # ── Admin Panel ──
 @app.route('/admin')
 def admin_panel():
     key = request.args.get('key')

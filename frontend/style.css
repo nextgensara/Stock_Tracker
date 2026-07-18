@@ -464,11 +464,40 @@ tr:hover td { background: rgba(0,255,200,0.02); }
   font-family: 'Orbitron', monospace;
   letter-spacing: 0.1em;
 }
-
 /* ── RESPONSIVE ── */
 @media (max-width: 768px) {
-  .stats-row { grid-template-columns: 1fr; }
-  .form-row { grid-template-columns: 1fr; }
-  nav { padding: 0 20px; }
-  section { padding: 0 16px; margin: 28px auto; }
+  nav {
+    padding: 0 16px;
+    height: auto;
+    flex-wrap: wrap;
+    gap: 10px;
+    padding-top: 12px;
+    padding-bottom: 12px;
+  }
+  .nav-links {
+    gap: 14px;
+    flex-wrap: wrap;
+  }
+  .nav-links a { font-size: 0.8rem; }
+
+  section { padding: 0 16px; margin: 24px auto; }
+
+  .stats-row { grid-template-columns: 1fr; gap: 12px; }
+  .stat-card { padding: 20px 16px; }
+
+  .form-row { grid-template-columns: 1fr; gap: 12px; }
+
+  #charts > div[style] {
+    grid-template-columns: 1fr !important;
+  }
+
+  .table-wrap { overflow-x: auto; }
+  table { min-width: 600px; }
+
+  h2 { font-size: 0.85rem; }
+}
+
+@media (max-width: 420px) {
+  .stat-val { font-size: 1.9rem; }
+  .btn-add { width: 100%; }
 }
