@@ -299,6 +299,15 @@ window.onload = function() {
   if (user && user.email) {
     document.getElementById('alert-email').value = user.email;
   }
+
+  // Set expiry date input to today's date by default
+  const today = new Date();
+  const yyyy = today.getFullYear();
+  const mm = String(today.getMonth() + 1).padStart(2, '0');
+  const dd = String(today.getDate()).padStart(2, '0');
+  document.getElementById('expiry_date').min = `${yyyy}-${mm}-${dd}`;
+  document.getElementById('expiry_date').value = `${yyyy}-${mm}-${dd}`;
+
   loadStats();
   loadProducts();
   loadAlerts();
