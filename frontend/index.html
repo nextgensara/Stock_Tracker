@@ -116,9 +116,22 @@
   <div class="form-card">
     <div class="form-row">
       <div class="form-group">
-        <label>WhatsApp Number (with country code)</label>
-        <input type="text" id="alert-phone" placeholder="+91XXXXXXXXXX">
-      </div>
+  <label>Country Code</label>
+  <select id="country-code" style="width:100%;">
+    <option value="+91" selected>🇮🇳 +91 (India)</option>
+    <option value="+1">🇺🇸 +1 (USA)</option>
+    <option value="+44">🇬🇧 +44 (UK)</option>
+    <option value="+971">🇦🇪 +971 (UAE)</option>
+    <option value="+65">🇸🇬 +65 (Singapore)</option>
+    <option value="+61">🇦🇺 +61 (Australia)</option>
+    <option value="+94">🇱🇰 +94 (Sri Lanka)</option>
+    <option value="+92">🇵🇰 +92 (Pakistan)</option>
+  </select>
+</div>
+<div class="form-group">
+  <label>WhatsApp Number</label>
+  <input type="text" id="alert-phone" placeholder="8778967207">
+</div>
       <div class="form-group" style="display:flex; align-items:flex-end;">
         <button class="btn-add" onclick="sendWhatsappAlerts()">
           💬 Send WhatsApp Alert
