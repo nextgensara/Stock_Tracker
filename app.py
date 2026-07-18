@@ -92,7 +92,7 @@ def send_email_alert(product_name, expiry_date, quantity, to_email):
     except Exception as e:
         print(f"Email error: {e}")
         return False
-    def send_whatsapp_alert(product_name, expiry_date, quantity, to_phone):
+def send_whatsapp_alert(product_name, expiry_date, quantity, to_phone):
     try:
         if Client is None:
             print("Twilio not installed")
@@ -102,7 +102,7 @@ def send_email_alert(product_name, expiry_date, quantity, to_email):
         client = Client(TWILIO_SID, TWILIO_TOKEN)
         client.messages.create(
             from_='whatsapp:+14155238886',
-            body=f"⚠️ StockTracker Alert\nProduct: {product_name}\nQty: {quantity}\nExpiry: {expiry_date}",
+            body=f"Alert: {product_name}, Qty: {quantity}, Expiry: {expiry_date}",
             to=f"whatsapp:{to_phone}"
         )
         return True
