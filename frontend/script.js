@@ -189,14 +189,17 @@ async function sendWhatsappAlerts() {
 
   const fullPhone = countryCode + phoneInput;
 
-  const res = await fetch('/api/send-whatsapp-alert', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ phone: fullPhone })
-  });
-
-  const data = await res.json();
-  alert(data.message);
+  try {
+    const res = await fetch('/api/send-whatsapp-alert', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ phone: fullPhone })
+    });
+    const data = await res.json();
+    alert(data.message);
+  } catch (err) {
+    alert('⏳ Server is waking up, please wait 10 seconds and click again...');
+  }
 }
 
 async function loadCharts() {
