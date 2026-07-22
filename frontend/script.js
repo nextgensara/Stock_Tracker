@@ -178,29 +178,7 @@ async function sendAlerts() {
   }
   alert(`✅ Alert sent for ${alerts.length} products!`);
 }
-async function sendWhatsappAlerts() {
-  const countryCode = document.getElementById('country-code').value;
-  const phoneInput = document.getElementById('alert-phone').value;
 
-  if (!phoneInput) {
-    alert('⚠️ please enter WhatsApp number!');
-    return;
-  }
-
-  const fullPhone = countryCode + phoneInput;
-
-  try {
-    const res = await fetch('/api/send-whatsapp-alert', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ phone: fullPhone })
-    });
-    const data = await res.json();
-    alert(data.message);
-  } catch (err) {
-    alert('⏳ Server is waking up, please wait 10 seconds and click again...');
-  }
-}
 
 async function loadCharts() {
   try {

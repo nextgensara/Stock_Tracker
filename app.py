@@ -356,52 +356,7 @@ def send_sms():
         return jsonify({"message": f"❌ SMS error: {str(e)}"}), 500
         return jsonify({"message": "❌ SMS error occurred."}), 500
 
-@app.route('/api/send-whatsapp-alert', methods=['POST'])
-def send_whatsapp_alert_route():
-    try:
-        data = request.json
-        to_phone = data.get('phone')
-        if not to_phone:
-            return jsonify({"message": "❌ Phone number required!"})
 
-        conn = get_db()
-        cursor = conn.cursor()
-        today = date.today().isoformat()
-        alert_date = (date.today() + timedelta(days=7)).isoformat()
-        cursor.execute(
-            "SELECT * FROM products WHERE expiry_date BETWEEN ? AND ?",
-            (today, alert_date)
-        )
-        expiring = [dict(row) for row in cursor.fetchall()]
-        conn.close()
-
-        if not expiring:
-            return jsonify({"message": "✅ No expiring products!"})
-
-        from datetime import datetime
-        for product in expiring:
-            exp = datetime.strptime(product['expiry_date'], "%Y-%m-%d").date()
-            days_left = (exp - date.today()).days
-            if days_left < 0:
-                label = "❌ EXPIRED"
-            elif days_left == 0:
-                label = "⚠️ EXPIRES TODAY"
-            elif days_left == 1:
-                label = "⚠️ EXPIRES TOMORROW"
-            else:
-                label = f"🔔 EXPIRES IN {days_left} DAYS"
-
-            send_whatsapp_alert(
-                f"{label}: {product['name']}",
-                product['expiry_date'],
-                product['quantity'],
-                to_phone
-            )
-
-        return jsonify({"message": f"✅ WhatsApp alert sent for {len(expiring)} products!"})
-    except Exception as e:
-        print(f"WhatsApp alert error: {e}")
-        return jsonify({"message": f"❌ WhatsApp alert error: {str(e)}"}), 500
     # ── Admin Panel ──
 @app.route('/admin')
 def admin_panel():
